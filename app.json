@@ -67,7 +67,9 @@
         {
           "photosPermission": "FoodSnap needs access to your photos to analyze food images."
         }
-      ]
+      ],
+      "expo-font",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
