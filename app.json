@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.snapfood.app",
+      "bundleIdentifier": "com.masiru.snapfood",
       "infoPlist": {
         "NSCameraUsageDescription": "FoodSnap needs camera access to take photos of your food for nutrition analysis.",
         "NSPhotoLibraryUsageDescription": "FoodSnap needs photo library access to select food photos for analysis."
@@ -22,7 +22,7 @@
         "backgroundColor": "#FF6B6B"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.snapfood.app",
+      "package": "com.masiru.snapfood",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
