@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Snapfood",
+    "name": "FoodSnap",
     "slug": "foodsnap",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -75,10 +75,10 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {},
       "eas": {
         "projectId": "8c8768a4-10f3-4846-894a-25b99f25db6d"
-      }
+      },
+      "router": {}
     },
     "owner": "masiru"
   }

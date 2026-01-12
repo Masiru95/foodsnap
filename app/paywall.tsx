@@ -4,7 +4,7 @@
  * Shows subscription options with localized prices from the SDK
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -24,60 +24,38 @@ import type { PurchasesPackage } from 'react-native-purchases';
 export default function PaywallScreen() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { 
+  const {
     isPremium,
-    monthlyPackage, 
-    annualPackage, 
-    purchase, 
+    monthlyPackage,
+    annualPackage,
+    purchase,
     restore,
-    isLoading: premiumLoading 
+    isLoading: premiumLoading,
   } = usePremium();
-  
+
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly');
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
 
-  // If already premium, redirect back
-  if (isPremium) {
-    return (
-      <View style={styles.container}>
-        <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
-          <Ionicons name="close" size={28} color="#fff" />
-        </TouchableOpacity>
-        <View style={styles.alreadyPremium}>
-          <Ionicons name="checkmark-circle" size={80} color="#4CAF50" />
-          <Text style={styles.alreadyPremiumTitle}>{t('paywall.alreadyPremium')}</Text>
-          <Text style={styles.alreadyPremiumSubtitle}>{t('paywall.enjoyFeatures')}</Text>
-          <TouchableOpacity style={styles.goBackButton} onPress={() => router.back()}>
-            <Text style={styles.goBackButtonText}>{t('common.goBack')}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
+  const isProcessing = isPurchasing || isRestoring || premiumLoading;
 
-  // Get selected package
-  const selectedPackage: PurchasesPackage | null = 
+  const selectedPackage: PurchasesPackage | null =
     selectedPlan === 'yearly' ? annualPackage : monthlyPackage;
 
-  // Format price display from package (localized by RevenueCat)
-  const getMonthlyPrice = () => {
-    if (monthlyPackage?.product?.priceString) {
-      return monthlyPackage.product.priceString;
-    }
-    return '$4.99'; // Fallback
-  };
+  const monthlyPrice = useMemo(() => {
+    return monthlyPackage?.product?.priceString ?? '';
+  }, [monthlyPackage]);
 
-  const getAnnualPrice = () => {
-    if (annualPackage?.product?.priceString) {
-      return annualPackage.product.priceString;
-    }
-    return '$39.99'; // Fallback
-  };
+  const annualPrice = useMemo(() => {
+    return annualPackage?.product?.priceString ?? '';
+  }, [annualPackage]);
 
-  // Calculate savings percentage
+  const hasMonthly = Boolean(monthlyPackage);
+  const hasAnnual = Boolean(annualPackage);
+
+  // Savings badge: only if we have real numeric prices from the SDK
   const getSavingsPercentage = () => {
-    if (monthlyPackage?.product?.price && annualPackage?.product?.price) {
+    if (monthlyPackage?.product?.price != null && annualPackage?.product?.price != null) {
       const monthlyYearlyCost = monthlyPackage.product.price * 12;
       const annualCost = annualPackage.product.price;
       const savings = Math.round(((monthlyYearlyCost - annualCost) / monthlyYearlyCost) * 100);
@@ -91,7 +69,7 @@ export default function PaywallScreen() {
     if (!selectedPackage) {
       Alert.alert(
         t('common.error'),
-        Platform.OS === 'web' 
+        Platform.OS === 'web'
           ? t('paywall.webNotSupported')
           : t('paywall.packageNotAvailable')
       );
@@ -99,10 +77,10 @@ export default function PaywallScreen() {
     }
 
     setIsPurchasing(true);
-    
+
     try {
       const result = await purchase(selectedPackage);
-      
+
       if (result.success) {
         Alert.alert(
           t('common.success'),
@@ -129,10 +107,10 @@ export default function PaywallScreen() {
   // Handle restore
   const handleRestore = async () => {
     setIsRestoring(true);
-    
+
     try {
       const result = await restore();
-      
+
       if (result.success) {
         if (result.restored) {
           Alert.alert(
@@ -162,12 +140,31 @@ export default function PaywallScreen() {
     }
   };
 
-  const isProcessing = isPurchasing || isRestoring || premiumLoading;
+  // If already premium, redirect back
+  if (isPremium) {
+    return (
+      <View style={styles.container}>
+        <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
+          <Ionicons name="close" size={28} color="#fff" />
+        </TouchableOpacity>
+        <View style={styles.alreadyPremium}>
+          <Ionicons name="checkmark-circle" size={80} color="#4CAF50" />
+          <Text style={styles.alreadyPremiumTitle}>{t('paywall.alreadyPremium')}</Text>
+          <Text style={styles.alreadyPremiumSubtitle}>{t('paywall.enjoyFeatures')}</Text>
+          <TouchableOpacity style={styles.goBackButton} onPress={() => router.back()}>
+            <Text style={styles.goBackButtonText}>{t('common.goBack')}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  const canPurchase = Boolean(selectedPackage) && !isProcessing;
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity 
-        style={styles.closeButton} 
+      <TouchableOpacity
+        style={styles.closeButton}
         onPress={() => router.back()}
         disabled={isProcessing}
       >
@@ -183,30 +180,12 @@ export default function PaywallScreen() {
 
         {/* Features */}
         <View style={styles.featuresContainer}>
-          <FeatureItem 
-            title={t('paywall.feature1Title')} 
-            description={t('paywall.feature1Desc')} 
-          />
-          <FeatureItem 
-            title={t('paywall.feature2Title')} 
-            description={t('paywall.feature2Desc')} 
-          />
-          <FeatureItem 
-            title={t('paywall.feature3Title')} 
-            description={t('paywall.feature3Desc')} 
-          />
-          <FeatureItem 
-            title={t('paywall.feature4Title')} 
-            description={t('paywall.feature4Desc')} 
-          />
-          <FeatureItem 
-            title={t('paywall.feature5Title')} 
-            description={t('paywall.feature5Desc')} 
-          />
-          <FeatureItem 
-            title={t('paywall.feature6Title')} 
-            description={t('paywall.feature6Desc')} 
-          />
+          <FeatureItem title={t('paywall.feature1Title')} description={t('paywall.feature1Desc')} />
+          <FeatureItem title={t('paywall.feature2Title')} description={t('paywall.feature2Desc')} />
+          <FeatureItem title={t('paywall.feature3Title')} description={t('paywall.feature3Desc')} />
+          <FeatureItem title={t('paywall.feature4Title')} description={t('paywall.feature4Desc')} />
+          <FeatureItem title={t('paywall.feature5Title')} description={t('paywall.feature5Desc')} />
+          <FeatureItem title={t('paywall.feature6Title')} description={t('paywall.feature6Desc')} />
         </View>
 
         {/* Pricing Options */}
@@ -216,26 +195,32 @@ export default function PaywallScreen() {
             style={[
               styles.pricingCard,
               selectedPlan === 'yearly' && styles.pricingCardSelected,
+              !hasAnnual && styles.pricingCardDisabled,
             ]}
             onPress={() => setSelectedPlan('yearly')}
             disabled={isProcessing}
           >
-            {selectedPlan === 'yearly' && (
+            {selectedPlan === 'yearly' && hasAnnual && (
               <View style={styles.savingsBadge}>
                 <Text style={styles.savingsText}>{getSavingsPercentage()}</Text>
               </View>
             )}
+
             <View style={styles.pricingRow}>
               <View style={styles.pricingInfo}>
                 <Text style={styles.pricingTitle}>{t('paywall.yearly')}</Text>
-                <Text style={styles.pricingDescription}>{t('paywall.yearlyBilled')}</Text>
+                <Text style={styles.pricingDescription}>
+                  {hasAnnual ? t('paywall.yearlyBilled') : t('paywall.packageNotAvailable')}
+                </Text>
               </View>
+
               <View style={styles.priceContainer}>
-                <Text style={styles.price}>{getAnnualPrice()}</Text>
+                <Text style={styles.price}>{annualPrice || '—'}</Text>
                 <Text style={styles.priceSubtext}>{t('paywall.perYear')}</Text>
               </View>
             </View>
-            {selectedPlan === 'yearly' && (
+
+            {selectedPlan === 'yearly' && hasAnnual && (
               <View style={styles.selectedIndicator}>
                 <Ionicons name="checkmark-circle" size={24} color="#FFD700" />
               </View>
@@ -247,6 +232,7 @@ export default function PaywallScreen() {
             style={[
               styles.pricingCard,
               selectedPlan === 'monthly' && styles.pricingCardSelected,
+              !hasMonthly && styles.pricingCardDisabled,
             ]}
             onPress={() => setSelectedPlan('monthly')}
             disabled={isProcessing}
@@ -254,14 +240,18 @@ export default function PaywallScreen() {
             <View style={styles.pricingRow}>
               <View style={styles.pricingInfo}>
                 <Text style={styles.pricingTitle}>{t('paywall.monthly')}</Text>
-                <Text style={styles.pricingDescription}>{t('paywall.monthlyBilled')}</Text>
+                <Text style={styles.pricingDescription}>
+                  {hasMonthly ? t('paywall.monthlyBilled') : t('paywall.packageNotAvailable')}
+                </Text>
               </View>
+
               <View style={styles.priceContainer}>
-                <Text style={styles.price}>{getMonthlyPrice()}</Text>
+                <Text style={styles.price}>{monthlyPrice || '—'}</Text>
                 <Text style={styles.priceSubtext}>{t('paywall.perMonth')}</Text>
               </View>
             </View>
-            {selectedPlan === 'monthly' && (
+
+            {selectedPlan === 'monthly' && hasMonthly && (
               <View style={styles.selectedIndicator}>
                 <Ionicons name="checkmark-circle" size={24} color="#FFD700" />
               </View>
@@ -270,17 +260,18 @@ export default function PaywallScreen() {
         </View>
 
         {/* Purchase Button */}
-        <TouchableOpacity 
-          style={[styles.purchaseButton, isProcessing && styles.purchaseButtonDisabled]} 
+        <TouchableOpacity
+          style={[
+            styles.purchaseButton,
+            (!canPurchase || !selectedPackage) && styles.purchaseButtonDisabled,
+          ]}
           onPress={handlePurchase}
-          disabled={isProcessing}
+          disabled={!canPurchase || !selectedPackage}
         >
           {isPurchasing ? (
             <ActivityIndicator color="#000" />
           ) : (
-            <Text style={styles.purchaseButtonText}>
-              {t('paywall.startPremium')}
-            </Text>
+            <Text style={styles.purchaseButtonText}>{t('paywall.startPremium')}</Text>
           )}
         </TouchableOpacity>
 
@@ -288,8 +279,8 @@ export default function PaywallScreen() {
         <Text style={styles.disclaimer}>{t('paywall.disclaimer')}</Text>
 
         {/* Restore Purchases */}
-        <TouchableOpacity 
-          style={styles.restoreButton} 
+        <TouchableOpacity
+          style={styles.restoreButton}
           onPress={handleRestore}
           disabled={isProcessing}
         >
@@ -301,8 +292,8 @@ export default function PaywallScreen() {
         </TouchableOpacity>
 
         {/* Not Now Button */}
-        <TouchableOpacity 
-          style={styles.notNowButton} 
+        <TouchableOpacity
+          style={styles.notNowButton}
           onPress={() => router.back()}
           disabled={isProcessing}
         >
@@ -409,6 +400,9 @@ const styles = StyleSheet.create({
   pricingCardSelected: {
     borderColor: '#FFD700',
     backgroundColor: '#1a1a0f',
+  },
+  pricingCardDisabled: {
+    opacity: 0.6,
   },
   savingsBadge: {
     position: 'absolute',
