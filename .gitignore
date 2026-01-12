@@ -39,3 +39,10 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+
+# Local dev artifacts
+.metro-cache/
+android/
+rg.exe
+rc.txt
+.npmrc
