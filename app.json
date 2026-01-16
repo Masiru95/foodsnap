@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Snapfood",
-    "slug": "foodsnap",
+    "slug": "snapfood",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -12,8 +12,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.masiru.snapfood",
       "infoPlist": {
-        "NSCameraUsageDescription": "FoodSnap necesita acceso a la c�mara para tomar fotos de tus alimentos y hacer an�lisis nutricional.",
-        "NSPhotoLibraryUsageDescription": "FoodSnap necesita acceso a la biblioteca de fotos para seleccionar im�genes de alimentos para su an�lisis."
+        "NSCameraUsageDescription": "Snapfood needs camera access to take photos of your food for nutrition analysis.",
+        "NSPhotoLibraryUsageDescription": "Snapfood needs photo library access to select food photos for analysis."
       }
     },
     "android": {
@@ -24,13 +24,12 @@
       "edgeToEdgeEnabled": true,
       "package": "com.masiru.snapfood",
       "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.SCHEDULE_EXACT_ALARM",
-        "com.android.vending.BILLING",
-        "android.permission.RECORD_AUDIO"
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "RECEIVE_BOOT_COMPLETED",
+        "SCHEDULE_EXACT_ALARM",
+        "com.android.vending.BILLING"
       ]
     },
     "web": {
@@ -40,6 +39,17 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "newArchEnabled": false
+          },
+          "ios": {
+            "newArchEnabled": false
+          }
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -59,13 +69,13 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "FoodSnap necesita acceso a la c�mara para tomar fotos de tus alimentos."
+          "cameraPermission": "Snapfood needs camera access to take photos of your food."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "FoodSnap necesita acceso a tus fotos para analizar im�genes de alimentos."
+          "photosPermission": "Snapfood needs access to your photos to analyze food images."
         }
       ]
     ],
@@ -76,7 +86,6 @@
       "eas": {
         "projectId": "8c8768a4-10f3-4846-894a-25b99f25db6d"
       }
-    },
-    "owner": "masiru"
+    }
   }
 }
