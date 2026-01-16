@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
-
-import initI18n from '../src/i18n';
 import { UserProvider } from '../src/contexts/UserContext';
 import { PremiumProvider } from '../src/contexts/PremiumContext';
+import React, { useEffect, useState } from 'react';
+import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import initI18n from '../src/i18n';
 
 // Error boundary component to catch crashes
 class ErrorBoundary extends React.Component<
@@ -44,15 +43,16 @@ class ErrorBoundary extends React.Component<
 
 export default function RootLayout() {
   const [i18nReady, setI18nReady] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
 
   useEffect(() => {
     const initialize = async () => {
       try {
         await initI18n();
+        setI18nReady(true);
       } catch (error) {
         console.error('[RootLayout] i18n init error:', error);
         // Continue anyway with default language
-      } finally {
         setI18nReady(true);
       }
     };
@@ -74,19 +74,13 @@ export default function RootLayout() {
         <PremiumProvider>
           <StatusBar style="light" />
           <Stack screenOptions={{ headerShown: false }}>
-            {/* Top-level routes only */}
             <Stack.Screen name="index" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="onboarding" />
             <Stack.Screen name="paywall" />
-
-            {/* Do NOT declare folder routes like "cooking", "track-food", or "legal" here.
-                Expo Router will automatically resolve nested routes such as:
-                - cooking/index
-                - cooking/recipe/[id]
-                - track-food/index
-                - legal/privacy, legal/terms, legal/help
-            */}
+            <Stack.Screen name="cooking" />
+            <Stack.Screen name="track-food" />
+            <Stack.Screen name="legal" />
           </Stack>
         </PremiumProvider>
       </UserProvider>

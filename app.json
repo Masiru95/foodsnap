@@ -1,19 +1,19 @@
 {
   "expo": {
-    "name": "FoodSnap",
+    "name": "Snapfood",
     "slug": "foodsnap",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "foodsnap",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.masiru.snapfood",
       "infoPlist": {
-        "NSCameraUsageDescription": "FoodSnap needs camera access to take photos of your food for nutrition analysis.",
-        "NSPhotoLibraryUsageDescription": "FoodSnap needs photo library access to select food photos for analysis."
+        "NSCameraUsageDescription": "FoodSnap necesita acceso a la c�mara para tomar fotos de tus alimentos y hacer an�lisis nutricional.",
+        "NSPhotoLibraryUsageDescription": "FoodSnap necesita acceso a la biblioteca de fotos para seleccionar im�genes de alimentos para su an�lisis."
       }
     },
     "android": {
@@ -59,17 +59,15 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "FoodSnap needs camera access to take photos of your food."
+          "cameraPermission": "FoodSnap necesita acceso a la c�mara para tomar fotos de tus alimentos."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "FoodSnap needs access to your photos to analyze food images."
+          "photosPermission": "FoodSnap necesita acceso a tus fotos para analizar im�genes de alimentos."
         }
-      ],
-      "expo-font",
-      "expo-web-browser"
+      ]
     ],
     "experiments": {
       "typedRoutes": true
@@ -77,8 +75,7 @@
     "extra": {
       "eas": {
         "projectId": "8c8768a4-10f3-4846-894a-25b99f25db6d"
-      },
-      "router": {}
+      }
     },
     "owner": "masiru"
   }

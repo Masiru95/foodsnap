@@ -8,19 +8,24 @@ import {
   Switch,
   Alert,
   Platform,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { usePremium } from '../../src/contexts/PremiumContext';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
-import { changeLanguage } from '../../src/i18n';
+import { changeLanguage, getSupportedLanguages } from '../../src/i18n';
 import {
   registerForPushNotificationsAsync,
   scheduleLunchReminder,
   scheduleDinnerReminder,
+  scheduleSnackReminder,
+  scheduleFridayReminder,
   getLunchReminderStatus,
   getDinnerReminderStatus,
+  getSnackReminderStatus,
+  getFridayReminderStatus,
 } from '../../src/services/notifications';
 
 export default function SettingsScreen() {
@@ -30,6 +35,11 @@ export default function SettingsScreen() {
   const [saveToGallery, setSaveToGallery] = useState(true);
   const [lunchReminder, setLunchReminder] = useState(false);
   const [dinnerReminder, setDinnerReminder] = useState(false);
+  const [snackReminder, setSnackReminder] = useState(false);
+  const [fridayReminder, setFridayReminder] = useState(false);
+  const [languageModalVisible, setLanguageModalVisible] = useState(false);
+  
+  const supportedLanguages = getSupportedLanguages();
 
   useEffect(() => {
     loadSettings();
@@ -44,8 +54,12 @@ export default function SettingsScreen() {
     // Load notification settings
     const lunchStatus = await getLunchReminderStatus();
     const dinnerStatus = await getDinnerReminderStatus();
+    const snackStatus = await getSnackReminderStatus();
+    const fridayStatus = await getFridayReminderStatus();
     setLunchReminder(lunchStatus);
     setDinnerReminder(dinnerStatus);
+    setSnackReminder(snackStatus);
+    setFridayReminder(fridayStatus);
   };
 
   const toggleSaveToGallery = async (value: boolean) => {
@@ -83,17 +97,54 @@ export default function SettingsScreen() {
     }
   };
 
-  const toggleLanguage = async () => {
-    const newLang = i18n.language === 'en' ? 'es' : 'en';
-    await changeLanguage(newLang);
+  const toggleSnackReminder = async (value: boolean) => {
+    if (value) {
+      await registerForPushNotificationsAsync();
+    }
+    await scheduleSnackReminder(value, i18n.language);
+    setSnackReminder(value);
     
-    // Update notifications with new language
-    if (lunchReminder) {
-      await scheduleLunchReminder(true, newLang);
+    if (value) {
+      Alert.alert(
+        t('settings.notificationsEnabled'),
+        t('settings.snackReminderDesc')
+      );
     }
-    if (dinnerReminder) {
-      await scheduleDinnerReminder(true, newLang);
+  };
+
+  const toggleFridayReminder = async (value: boolean) => {
+    if (value) {
+      await registerForPushNotificationsAsync();
     }
+    await scheduleFridayReminder(value, i18n.language);
+    setFridayReminder(value);
+    
+    if (value) {
+      Alert.alert(
+        t('settings.notificationsEnabled'),
+        t('settings.fridayReminderDesc')
+      );
+    }
+  };
+
+  const toggleLanguage = async () => {
+    setLanguageModalVisible(true);
+  };
+
+  const selectLanguage = async (langCode: string) => {
+    await changeLanguage(langCode);
+    setLanguageModalVisible(false);
+    
+    // Update all notifications with new language
+    if (lunchReminder) await scheduleLunchReminder(true, langCode);
+    if (dinnerReminder) await scheduleDinnerReminder(true, langCode);
+    if (snackReminder) await scheduleSnackReminder(true, langCode);
+    if (fridayReminder) await scheduleFridayReminder(true, langCode);
+  };
+
+  const getCurrentLanguageDisplay = () => {
+    const currentLang = supportedLanguages.find(l => l.code === i18n.language);
+    return currentLang ? `${currentLang.flag} ${currentLang.name}` : 'English';
   };
 
   return (
@@ -117,7 +168,7 @@ export default function SettingsScreen() {
             <View style={styles.settingInfo}>
               <Text style={styles.settingLabel}>{t('settings.language')}</Text>
               <Text style={styles.settingDescription}>
-                {i18n.language === 'en' ? 'English' : 'Español'}
+                {getCurrentLanguageDisplay()}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#aaa" />
@@ -168,6 +219,36 @@ export default function SettingsScreen() {
             <Switch
               value={dinnerReminder}
               onValueChange={toggleDinnerReminder}
+              trackColor={{ false: '#333', true: '#FF6B6B' }}
+              thumbColor="#fff"
+            />
+          </View>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingLabel}>{t('settings.snackReminder')}</Text>
+              <Text style={styles.settingDescription}>
+                {t('settings.snackReminderDesc')}
+              </Text>
+            </View>
+            <Switch
+              value={snackReminder}
+              onValueChange={toggleSnackReminder}
+              trackColor={{ false: '#333', true: '#FF6B6B' }}
+              thumbColor="#fff"
+            />
+          </View>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingLabel}>{t('settings.fridayReminder')}</Text>
+              <Text style={styles.settingDescription}>
+                {t('settings.fridayReminderDesc')}
+              </Text>
+            </View>
+            <Switch
+              value={fridayReminder}
+              onValueChange={toggleFridayReminder}
               trackColor={{ false: '#333', true: '#FF6B6B' }}
               thumbColor="#fff"
             />
@@ -233,6 +314,51 @@ export default function SettingsScreen() {
           <Text style={styles.versionText}>{t('settings.version')}</Text>
         </View>
       </ScrollView>
+
+      {/* Language Selection Modal */}
+      <Modal
+        visible={languageModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLanguageModalVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1}
+          onPress={() => setLanguageModalVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{t('settings.language')}</Text>
+            {supportedLanguages.map((lang) => (
+              <TouchableOpacity
+                key={lang.code}
+                style={[
+                  styles.languageOption,
+                  i18n.language === lang.code && styles.languageOptionSelected
+                ]}
+                onPress={() => selectLanguage(lang.code)}
+              >
+                <Text style={styles.languageFlag}>{lang.flag}</Text>
+                <Text style={[
+                  styles.languageText,
+                  i18n.language === lang.code && styles.languageTextSelected
+                ]}>
+                  {lang.name}
+                </Text>
+                {i18n.language === lang.code && (
+                  <Ionicons name="checkmark" size={24} color="#FF6B6B" />
+                )}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setLanguageModalVisible(false)}
+            >
+              <Text style={styles.modalCloseText}>{t('common.cancel')}</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -373,5 +499,63 @@ const styles = StyleSheet.create({
   versionText: {
     fontSize: 14,
     color: '#555',
+  },
+  // Language Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 16,
+    padding: 20,
+    width: '85%',
+    maxWidth: 320,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  languageOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: '#2a2a2a',
+  },
+  languageOptionSelected: {
+    backgroundColor: '#FF6B6B20',
+    borderWidth: 1,
+    borderColor: '#FF6B6B',
+  },
+  languageFlag: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  languageText: {
+    fontSize: 16,
+    color: '#fff',
+    flex: 1,
+  },
+  languageTextSelected: {
+    color: '#FF6B6B',
+    fontWeight: '600',
+  },
+  modalCloseButton: {
+    marginTop: 12,
+    padding: 16,
+    backgroundColor: '#333',
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalCloseText: {
+    fontSize: 16,
+    color: '#aaa',
   },
 });

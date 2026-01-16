@@ -1,39 +1,26 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useUser } from '../src/contexts/UserContext';
 
 export default function Index() {
   const router = useRouter();
+  const { userId, isLoading, hasCompletedOnboarding } = useUser();
 
   useEffect(() => {
-    let cancelled = false;
-
-    const go = async () => {
-      try {
-        // App must NEVER block on backend/user creation.
-        const onboardingComplete = await AsyncStorage.getItem('onboardingComplete');
-
-        if (cancelled) return;
-
-        if (onboardingComplete === 'true') {
-          // Main app
-          router.replace('/(tabs)');
-        } else {
-          // Local-only onboarding
-          router.replace('/onboarding');
-        }
-      } catch {
-        // If storage fails for any reason, still allow app to proceed.
-        if (!cancelled) router.replace('/onboarding');
+    if (!isLoading) {
+      if (!userId) {
+        // Will trigger user creation in UserContext
+        return;
       }
-    };
-
-    go();
-    return () => {
-      cancelled = true;
-    };
-  }, [router]);
+      
+      if (!hasCompletedOnboarding) {
+        router.replace('/onboarding');
+      } else {
+        router.replace('/(tabs)/home');
+      }
+    }
+  }, [isLoading, userId, hasCompletedOnboarding]);
 
   return (
     <View style={styles.container}>
@@ -46,9 +33,13 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B0B0B',
-    justifyContent: 'center',
+    backgroundColor: '#0c0c0c',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  text: { marginTop: 12, color: '#fff', fontSize: 16 },
+  text: {
+    color: '#fff',
+    marginTop: 16,
+    fontSize: 16,
+  },
 });

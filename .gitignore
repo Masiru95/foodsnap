@@ -9,9 +9,11 @@ dist/
 web-build/
 expo-env.d.ts
 
-# Native
+# Native folders - let EAS generate them
 android/
 ios/
+
+# Native
 .kotlin/
 *.orig.*
 *.jks
@@ -39,10 +41,3 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
-
-# Local dev artifacts
-.metro-cache/
-android/
-rg.exe
-rc.txt
-.npmrc

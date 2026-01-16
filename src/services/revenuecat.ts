@@ -1,41 +1,28 @@
 /**
- * RevenueCat Service
- * Handles all RevenueCat SDK interactions for in-app purchases
- * 
- * IMPORTANT: This service is designed to be crash-safe.
- * If RevenueCat fails to initialize, the app will continue working
- * with premium features disabled.
+ * RevenueCat Service (crash-safe)
+ * IMPORTANT:
+ * - On mobile: NEVER return mock packages (they can crash purchasePackage in native).
+ * - On web: return mocks so the UI preview works.
  */
 
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Environment variables
 const ANDROID_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY || '';
 const IOS_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY || '';
-const ENTITLEMENT_ID = process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT || 'premium';
+export const ENTITLEMENT_ID = process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT || 'premium';
 const OFFERING_ID = process.env.EXPO_PUBLIC_REVENUECAT_OFFERING || 'default';
 
-// Storage key for RevenueCat anonymous user ID
 const RC_USER_ID_KEY = 'revenuecat_user_id';
 
-// Track initialization state
 let isInitialized = false;
 let Purchases: any = null;
+let initPromise: Promise<void> | null = null;
 
-/**
- * Safely import RevenueCat SDK
- * Returns null if import fails (e.g., on web or if not properly installed)
- */
 async function getPurchasesSDK() {
-  if (Platform.OS === 'web') {
-    return null;
-  }
-  
-  if (Purchases) {
-    return Purchases;
-  }
-  
+  if (Platform.OS === 'web') return null;
+  if (Purchases) return Purchases;
+
   try {
     const module = await import('react-native-purchases');
     Purchases = module.default;
@@ -46,9 +33,10 @@ async function getPurchasesSDK() {
   }
 }
 
-/**
- * Check if API key is valid (not a placeholder)
- */
+function normalizeKey(raw: string): string {
+  return (raw || '').trim().replace(/^"|"$/g, '').replace(/^'|'$/g, '');
+}
+
 function isValidApiKey(key: string): boolean {
   if (!key) return false;
   if (key === 'your_revenuecat_android_api_key') return false;
@@ -58,89 +46,86 @@ function isValidApiKey(key: string): boolean {
 }
 
 /**
- * Initialize RevenueCat SDK
- * Should be called once when app starts
- * 
- * This function is designed to never throw - it will log errors
- * and fail gracefully if initialization fails.
+ * Ensure init runs once and doesn't race on cold starts.
  */
-export async function initializeRevenueCat(): Promise<void> {
-  // Skip on web
-  if (Platform.OS === 'web') {
-    console.log('[RevenueCat] Web platform detected, skipping initialization');
+async function ensureInitialized(): Promise<void> {
+  if (Platform.OS === 'web') return;
+  if (isInitialized) return;
+
+  if (initPromise) {
+    await initPromise;
     return;
   }
 
-  // Don't re-initialize
-  if (isInitialized) {
-    console.log('[RevenueCat] Already initialized');
-    return;
-  }
+  initPromise = (async () => {
+    const rawKey = Platform.OS === 'ios' ? IOS_KEY : ANDROID_KEY;
+    const apiKey = normalizeKey(rawKey);
 
-  const rawKey = Platform.OS === 'ios' ? IOS_KEY : ANDROID_KEY;
-const apiKey = rawKey.trim().replace(/^"|"$/g, "").replace(/^'|'$/g, "");
-console.log('[RevenueCat] apiKey length:', apiKey.length);
-  
-  // Validate API key
-  if (!isValidApiKey(apiKey)) {
-    console.warn('[RevenueCat] API key not configured or invalid. Purchases will not work.');
-    console.warn('[RevenueCat] Current key:', apiKey ? apiKey.substring(0, 10) + '...' : '(empty)');
-    return;
-  }
+    console.log('[RevenueCat] apiKey length:', apiKey.length);
 
-  try {
-    // Dynamically import to avoid crash if module isn't available
+    if (!isValidApiKey(apiKey)) {
+      console.warn('[RevenueCat] API key not configured or invalid. Purchases will not work.');
+      console.warn('[RevenueCat] Current key:', apiKey ? apiKey.substring(0, 10) + '...' : '(empty)');
+      return;
+    }
+
     const sdk = await getPurchasesSDK();
     if (!sdk) {
       console.warn('[RevenueCat] SDK not available');
       return;
     }
 
-    // Enable debug logs in development
+    // Debug logs in dev
     if (__DEV__) {
       try {
         const { LOG_LEVEL } = await import('react-native-purchases');
         sdk.setLogLevel(LOG_LEVEL.DEBUG);
-      } catch (e) {
-        console.warn('[RevenueCat] Could not set log level');
+      } catch {
+        // ignore
       }
     }
 
-    // Check if we have a stored user ID for consistency across app restarts
     let storedUserId: string | null = null;
     try {
       storedUserId = await AsyncStorage.getItem(RC_USER_ID_KEY);
-    } catch (e) {
-      console.warn('[RevenueCat] Could not read stored user ID');
+    } catch {
+      // ignore
     }
-    
-    // Configure RevenueCat
+
     await sdk.configure({
       apiKey,
       appUserID: storedUserId || undefined,
     });
 
-    // Get and store the app user ID for future sessions
     try {
       const appUserId = await sdk.getAppUserID();
       await AsyncStorage.setItem(RC_USER_ID_KEY, appUserId);
       console.log('[RevenueCat] Initialized successfully with user:', appUserId);
-    } catch (e) {
-      console.warn('[RevenueCat] Could not get/store user ID');
+    } catch {
+      // ignore
     }
-    
+
     isInitialized = true;
-  } catch (error) {
-    console.error('[RevenueCat] Initialization error:', error);
-    // Don't throw - app should continue working without purchases
+  })();
+
+  try {
+    await initPromise;
+  } finally {
+    // allow retry next time if init failed
+    if (!isInitialized) initPromise = null;
   }
 }
 
-/**
- * Check if user has premium entitlement
- */
+export async function initializeRevenueCat(): Promise<void> {
+  try {
+    await ensureInitialized();
+  } catch (e) {
+    console.error('[RevenueCat] Initialization error:', e);
+  }
+}
+
 export async function checkPremiumStatus(): Promise<boolean> {
-  // On web or if not initialized, check AsyncStorage fallback
+  // Web or not initialized: fallback to local
   if (Platform.OS === 'web' || !isInitialized) {
     try {
       const storedPremium = await AsyncStorage.getItem('isPremium');
@@ -156,12 +141,11 @@ export async function checkPremiumStatus(): Promise<boolean> {
       const storedPremium = await AsyncStorage.getItem('isPremium');
       return storedPremium === 'true';
     }
-    
+
     const customerInfo = await sdk.getCustomerInfo();
-    return customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
+    return customerInfo?.entitlements?.active?.[ENTITLEMENT_ID] !== undefined;
   } catch (error) {
     console.error('[RevenueCat] Error checking premium status:', error);
-    // Fallback to local storage
     try {
       const storedPremium = await AsyncStorage.getItem('isPremium');
       return storedPremium === 'true';
@@ -171,13 +155,9 @@ export async function checkPremiumStatus(): Promise<boolean> {
   }
 }
 
-/**
- * Get current customer info
- */
 export async function getCustomerInfo(): Promise<any | null> {
-  if (Platform.OS === 'web' || !isInitialized) {
-    return null;
-  }
+  if (Platform.OS === 'web') return null;
+  if (!isInitialized) return null;
 
   try {
     const sdk = await getPurchasesSDK();
@@ -190,39 +170,39 @@ export async function getCustomerInfo(): Promise<any | null> {
 }
 
 /**
- * Get available offerings (packages/products)
+ * Offerings:
+ * - Web: mock offering (UI preview).
+ * - Mobile: return null if not ready (NO MOCK), so UI disables purchase safely.
  */
 export async function getOfferings(): Promise<any | null> {
-  if (Platform.OS === 'web') {
-    // Return mock offerings for web preview
-    return getMockOffering();
-  }
+  if (Platform.OS === 'web') return getMockOffering();
 
+  // Try init (safe). If it fails, return null.
+  await ensureInitialized();
   if (!isInitialized) {
-    console.warn('[RevenueCat] Not initialized, returning mock offerings');
-    return getMockOffering();
+    console.warn('[RevenueCat] Not initialized, offerings unavailable');
+    return null;
   }
 
   try {
     const sdk = await getPurchasesSDK();
-    if (!sdk) return getMockOffering();
-    
+    if (!sdk) return null;
+
     const offerings = await sdk.getOfferings();
-    
-    // Try to get the specified offering, fallback to current
-    if (offerings.all[OFFERING_ID]) {
-      return offerings.all[OFFERING_ID];
-    }
-    
-    return offerings.current || getMockOffering();
+
+    if (offerings?.all?.[OFFERING_ID]) return offerings.all[OFFERING_ID];
+    if (offerings?.current) return offerings.current;
+
+    return null;
   } catch (error) {
     console.error('[RevenueCat] Error getting offerings:', error);
-    return getMockOffering();
+    return null;
   }
 }
 
 /**
- * Purchase a package
+ * IMPORTANT: Only buy packages returned by the SDK.
+ * If pkg is "mock"/invalid -> return a clean error (avoid native crash).
  */
 export async function purchasePackage(pkg: any): Promise<{
   success: boolean;
@@ -230,108 +210,81 @@ export async function purchasePackage(pkg: any): Promise<{
   error?: string;
 }> {
   if (Platform.OS === 'web') {
-    return {
-      success: false,
-      error: 'Purchases are not available on web. Please use the mobile app.',
-    };
+    return { success: false, error: 'Purchases are not available on web. Please use the mobile app.' };
   }
 
+  await ensureInitialized();
   if (!isInitialized) {
+    return { success: false, error: 'Purchase system not initialized. Please restart the app.' };
+  }
+
+  // Guard: prevent passing mock/handmade objects to native
+  if (!pkg || !pkg.identifier || !pkg.product || !pkg.product.identifier) {
     return {
       success: false,
-      error: 'Purchase system not initialized. Please restart the app.',
+      error: 'Subscriptions are not available yet. Please try again in a moment.',
     };
   }
 
   try {
     const sdk = await getPurchasesSDK();
-    if (!sdk) {
-      return { success: false, error: 'Purchase system unavailable' };
-    }
-    
+    if (!sdk) return { success: false, error: 'Purchase system unavailable' };
+
     const { customerInfo } = await sdk.purchasePackage(pkg);
-    
-    // Update local storage as backup
-    const isPremium = customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
-    await AsyncStorage.setItem('isPremium', isPremium.toString());
-    
+
+    const premium = customerInfo?.entitlements?.active?.[ENTITLEMENT_ID] !== undefined;
+    await AsyncStorage.setItem('isPremium', String(premium));
+
     return { success: true, customerInfo };
   } catch (error: any) {
-    // Handle user cancellation
-    if (error.userCancelled) {
-      return { success: false, error: 'CANCELLED' };
-    }
-    
+    if (error?.userCancelled) return { success: false, error: 'CANCELLED' };
+
     console.error('[RevenueCat] Purchase error:', error);
-    return { success: false, error: error.message || 'Purchase failed' };
+    return { success: false, error: error?.message || 'Purchase failed' };
   }
 }
 
-/**
- * Restore purchases
- */
 export async function restorePurchases(): Promise<{
   success: boolean;
   isPremium: boolean;
   error?: string;
 }> {
   if (Platform.OS === 'web') {
-    return {
-      success: false,
-      isPremium: false,
-      error: 'Restore is not available on web.',
-    };
+    return { success: false, isPremium: false, error: 'Restore is not available on web.' };
   }
 
+  await ensureInitialized();
   if (!isInitialized) {
-    return {
-      success: false,
-      isPremium: false,
-      error: 'Purchase system not initialized. Please restart the app.',
-    };
+    return { success: false, isPremium: false, error: 'Purchase system not initialized. Please restart the app.' };
   }
 
   try {
     const sdk = await getPurchasesSDK();
-    if (!sdk) {
-      return { success: false, isPremium: false, error: 'Purchase system unavailable' };
-    }
-    
+    if (!sdk) return { success: false, isPremium: false, error: 'Purchase system unavailable' };
+
     const customerInfo = await sdk.restorePurchases();
-    const isPremium = customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
-    
-    // Update local storage
-    await AsyncStorage.setItem('isPremium', isPremium.toString());
-    
-    return { success: true, isPremium };
+    const premium = customerInfo?.entitlements?.active?.[ENTITLEMENT_ID] !== undefined;
+
+    await AsyncStorage.setItem('isPremium', String(premium));
+    return { success: true, isPremium: premium };
   } catch (error: any) {
     console.error('[RevenueCat] Restore error:', error);
-    return { success: false, isPremium: false, error: error.message || 'Restore failed' };
+    return { success: false, isPremium: false, error: error?.message || 'Restore failed' };
   }
 }
 
-/**
- * Add listener for customer info updates
- */
-export function addCustomerInfoListener(
-  callback: (customerInfo: any) => void
-): () => void {
-  if (Platform.OS === 'web' || !isInitialized) {
-    return () => {}; // No-op
-  }
-
-  // Use sync check since we need to return immediately
-  if (!Purchases) {
-    return () => {};
-  }
+export function addCustomerInfoListener(callback: (customerInfo: any) => void): () => void {
+  if (Platform.OS === 'web') return () => {};
+  if (!isInitialized) return () => {};
+  if (!Purchases) return () => {};
 
   try {
     const listener = Purchases.addCustomerInfoUpdateListener(callback);
     return () => {
       try {
         listener.remove();
-      } catch (e) {
-        // Ignore removal errors
+      } catch {
+        // ignore
       }
     };
   } catch (error) {
@@ -341,7 +294,7 @@ export function addCustomerInfoListener(
 }
 
 /**
- * Mock offering for web preview and fallback
+ * Mock offering (WEB ONLY)
  */
 function getMockOffering(): any {
   return {
@@ -354,56 +307,23 @@ function getMockOffering(): any {
         packageType: 'MONTHLY',
         product: {
           identifier: 'premium_monthly',
-          description: 'Monthly Premium Subscription',
           title: 'Premium Monthly',
           price: 4.99,
           priceString: '$4.99',
           currencyCode: 'USD',
-          introPrice: null,
-          discounts: [],
-          productCategory: 'SUBSCRIPTION',
-          productType: 'AUTO_RENEWABLE_SUBSCRIPTION',
-          subscriptionPeriod: 'P1M',
-          defaultOption: null,
-          subscriptionOptions: [],
-          presentedOfferingIdentifier: 'default',
-          presentedOfferingContext: null,
         },
-        offeringIdentifier: 'default',
-        presentedOfferingContext: null,
       },
       {
         identifier: '$rc_annual',
         packageType: 'ANNUAL',
         product: {
           identifier: 'premium_annual',
-          description: 'Annual Premium Subscription',
           title: 'Premium Annual',
           price: 39.99,
           priceString: '$39.99',
           currencyCode: 'USD',
-          introPrice: null,
-          discounts: [],
-          productCategory: 'SUBSCRIPTION',
-          productType: 'AUTO_RENEWABLE_SUBSCRIPTION',
-          subscriptionPeriod: 'P1Y',
-          defaultOption: null,
-          subscriptionOptions: [],
-          presentedOfferingIdentifier: 'default',
-          presentedOfferingContext: null,
         },
-        offeringIdentifier: 'default',
-        presentedOfferingContext: null,
       },
     ],
-    monthly: null,
-    annual: null,
-    lifetime: null,
-    sixMonth: null,
-    threeMonth: null,
-    twoMonth: null,
-    weekly: null,
   };
 }
-
-export { ENTITLEMENT_ID };

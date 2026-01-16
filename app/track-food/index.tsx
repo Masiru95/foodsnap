@@ -73,27 +73,67 @@ export default function TrackFoodScreen() {
   };
 
   const analyzeFood = async (base64Image: string) => {
-    if (!userId) return;
+    if (!userId) {
+      Alert.alert(t('common.error'), 'User not found. Please restart the app.');
+      return;
+    }
 
     setIsAnalyzing(true);
+    setAnalysisResult(null);
+    
+    // Create abort controller for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+    
     try {
+      console.log('Starting food analysis...');
       const response = await fetch(`${API_URL}/api/analyze-food`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId,
           imageBase64: base64Image,
-          language: i18n.language, // Send current language
+          language: i18n.language,
         }),
+        signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
+
+      // Check if response is OK
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Server error:', response.status, errorText);
+        throw new Error(`Server error: ${response.status}`);
+      }
+
       const data = await response.json();
+      
+      // Validate response has required fields
+      if (!data.dishName || data.calories === undefined) {
+        console.error('Invalid response format:', data);
+        throw new Error('Invalid response format');
+      }
+      
+      console.log('Analysis successful:', data.dishName);
       setAnalysisResult(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to analyze food:', error);
-      Alert.alert(t('trackFood.analysisFailed'), t('trackFood.analysisFailedMessage'));
+      
+      // Handle specific error types
+      if (error.name === 'AbortError') {
+        Alert.alert(
+          t('trackFood.analysisFailed'), 
+          'Analysis took too long. Please try again with a clearer photo.'
+        );
+      } else {
+        Alert.alert(t('trackFood.analysisFailed'), t('trackFood.analysisFailedMessage'));
+      }
+      
       setSelectedImage(null);
+      setAnalysisResult(null);
     } finally {
+      clearTimeout(timeoutId);
       setIsAnalyzing(false);
     }
   };

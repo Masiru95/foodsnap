@@ -1,7 +1,29 @@
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+
+// Helper function for fetch with timeout
+const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeout = 10000) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout');
+    }
+    throw error;
+  }
+};
 
 interface UserContextType {
   userId: string | null;
@@ -16,189 +38,121 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-type JsonValue = any;
-
-const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeoutMs = 15000) => {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    return await fetch(url, { ...options, signal: controller.signal });
-  } finally {
-    clearTimeout(id);
-  }
-};
-
-const safeJson = async (res: Response): Promise<JsonValue | null> => {
-  try {
-    return await res.json();
-  } catch {
-    return null;
-  }
-};
-
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [isPremium, setIsPremium] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
 
-  const mountedRef = useRef(true);
   useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  const apiBase = useMemo(() => {
-    const trimmed = (API_URL || '').trim();
-    if (!trimmed) {
-      console.warn(
-        '[UserContext] EXPO_PUBLIC_BACKEND_URL is empty. App will continue without backend until configured.'
-      );
-    }
-    // No trailing slash to keep URLs consistent
-    return trimmed.replace(/\/+$/, '');
+    initializeUser();
   }, []);
 
   const initializeUser = async () => {
     try {
-      // Local first: never block UI on backend
-      const [storedUserId, onboardingComplete, storedPremium] = await Promise.all([
-        AsyncStorage.getItem('userId'),
-        AsyncStorage.getItem('onboardingComplete'),
-        AsyncStorage.getItem('isPremium'),
-      ]);
-
-      if (!mountedRef.current) return;
-
-      setHasCompletedOnboarding(onboardingComplete === 'true');
-      if (storedPremium === 'true') setIsPremium(true);
-
+      console.log('[UserContext] Starting initialization...');
+      const storedUserId = await AsyncStorage.getItem('userId');
+      const onboardingComplete = await AsyncStorage.getItem('onboardingComplete');
+      const storedPremium = await AsyncStorage.getItem('isPremium');
+      
+      // Set premium from local storage first
+      if (storedPremium === 'true') {
+        setIsPremium(true);
+      }
+      
       if (storedUserId) {
+        console.log('[UserContext] Found stored user:', storedUserId);
         setUserId(storedUserId);
-
-        // Try refresh, but never hang forever
-        await refreshUserInternal(storedUserId);
+        setHasCompletedOnboarding(onboardingComplete === 'true');
+        // Don't await this - let it run in background
+        refreshUser(storedUserId).catch(console.error);
       } else {
-        // Create user, but never hang forever
-        await createUserInternal();
+        console.log('[UserContext] No stored user, creating new...');
+        await createUser();
       }
     } catch (error) {
       console.error('[UserContext] Failed to initialize user:', error);
+      // Even on error, we should stop loading to prevent infinite hang
     } finally {
-      if (mountedRef.current) setIsLoading(false);
+      console.log('[UserContext] Initialization complete');
+      setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    initializeUser();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const createUserInternal = async () => {
-    if (!apiBase) {
-      // Backend not configured: do NOT hang; keep userId null.
-      console.warn('[UserContext] Skipping createUser because backend URL is missing.');
-      return;
-    }
-
+  const createUser = async () => {
     try {
-      const res = await fetchWithTimeout(`${apiBase}/api/users`, {
+      console.log('[UserContext] Creating new user...');
+      const response = await fetchWithTimeout(`${API_URL}/api/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-      });
-
-      const data = await safeJson(res);
-
-      if (!res.ok || !data?.userId) {
-        console.error('[UserContext] createUser failed:', { status: res.status, data });
-        return;
+      }, 15000); // 15 second timeout
+      
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}`);
       }
-
-      await AsyncStorage.setItem('userId', String(data.userId));
-
-      if (!mountedRef.current) return;
-
-      setUserId(String(data.userId));
-      setIsPremium(Boolean(data.isPremium));
-
-      // Persist premium locally for faster boot next time
-      await AsyncStorage.setItem('isPremium', String(Boolean(data.isPremium)));
+      
+      const data = await response.json();
+      await AsyncStorage.setItem('userId', data.userId);
+      setUserId(data.userId);
+      setIsPremium(data.isPremium);
+      console.log('[UserContext] User created:', data.userId);
     } catch (error) {
       console.error('[UserContext] Failed to create user:', error);
+      // Generate a local UUID as fallback
+      const fallbackId = 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      await AsyncStorage.setItem('userId', fallbackId);
+      setUserId(fallbackId);
+      console.log('[UserContext] Using fallback user ID:', fallbackId);
     }
   };
 
-  const refreshUserInternal = async (id: string) => {
-    if (!apiBase) {
-      console.warn('[UserContext] Skipping refreshUser because backend URL is missing.');
-      return;
-    }
-
+  const refreshUser = async (id?: string) => {
+    const targetId = id || userId;
+    if (!targetId) return;
+    
     try {
-      const res = await fetchWithTimeout(`${apiBase}/api/users/${id}`, {}, 15000);
-      const data = await safeJson(res);
-
-      if (!res.ok) {
-        console.error('[UserContext] refreshUser failed:', { status: res.status, data });
+      console.log('[UserContext] Refreshing user data...');
+      const response = await fetchWithTimeout(`${API_URL}/api/users/${targetId}`, {}, 10000);
+      
+      if (!response.ok) {
+        console.warn('[UserContext] Server returned non-OK status:', response.status);
         return;
       }
-
-      const premium = Boolean(data?.isPremium);
-
-      if (!mountedRef.current) return;
-
-      setIsPremium(premium);
-      await AsyncStorage.setItem('isPremium', String(premium));
+      
+      const data = await response.json();
+      setIsPremium(data.isPremium || false);
+      console.log('[UserContext] User refreshed, isPremium:', data.isPremium);
     } catch (error) {
       console.error('[UserContext] Failed to refresh user:', error);
+      // Don't throw - this is a non-critical operation
     }
-  };
-
-  // Public API functions (stable)
-  const createUser = async () => {
-    await createUserInternal();
-  };
-
-  const refreshUser = async () => {
-    const targetId = userId;
-    if (!targetId) return;
-    await refreshUserInternal(targetId);
   };
 
   const completeOnboarding = async () => {
     await AsyncStorage.setItem('onboardingComplete', 'true');
-    if (mountedRef.current) setHasCompletedOnboarding(true);
+    setHasCompletedOnboarding(true);
   };
 
   const setPremium = async (premium: boolean) => {
     try {
-      // Local first: immediate UX
-      if (mountedRef.current) setIsPremium(premium);
-      await AsyncStorage.setItem('isPremium', String(premium));
-
-      // Server best-effort
-      if (!apiBase) {
-        console.warn('[UserContext] Skipping server premium update because backend URL is missing.');
-        return;
-      }
-      if (!userId) return;
-
-      const res = await fetchWithTimeout(
-        `${apiBase}/api/users/${userId}/premium?is_premium=${premium}`,
-        { method: 'PATCH' },
-        15000
-      );
-
-      if (!res.ok) {
-        const data = await safeJson(res);
-        console.error('[UserContext] Server error updating premium:', { status: res.status, data });
+      // Update locally first for immediate UI feedback
+      console.log('[UserContext] Setting premium to:', premium);
+      setIsPremium(premium);
+      await AsyncStorage.setItem('isPremium', premium.toString());
+      console.log('[UserContext] Premium state updated successfully');
+      
+      // Then update on server if userId exists (non-blocking)
+      if (userId) {
+        fetchWithTimeout(`${API_URL}/api/users/${userId}/premium?is_premium=${premium}`, {
+          method: 'PATCH',
+        }, 10000).catch((error) => {
+          console.warn('[UserContext] Server premium update failed:', error);
+          // Keep the local state even if server fails
+        });
       }
     } catch (error) {
       console.error('[UserContext] Failed to update premium status:', error);
-      // Keep local state anyway
+      // Keep the local state even if something fails
     }
   };
 
@@ -222,6 +176,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
 export function useUser() {
   const context = useContext(UserContext);
-  if (!context) throw new Error('useUser must be used within UserProvider');
+  if (!context) {
+    throw new Error('useUser must be used within UserProvider');
+  }
   return context;
 }

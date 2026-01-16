@@ -17,15 +17,15 @@ export default function TermsScreen() {
   const content = i18n.language === 'es' ? {
     title: 'Términos de Servicio',
     lastUpdated: 'Última actualización: Enero 2026',
-    intro: 'Bienvenido a FoodSnap. Al usar nuestra aplicación, aceptas los siguientes Términos de Servicio. Por favor léelos cuidadosamente.',
+    intro: 'Bienvenido a Snapfood. Al usar nuestra aplicación, aceptas los siguientes Términos de Servicio. Por favor léelos cuidadosamente.',
     sections: [
       {
         title: '1. Aceptación de los Términos',
-        content: 'Al acceder y usar FoodSnap, aceptas estar sujeto a estos Términos de Servicio y todas las leyes y regulaciones aplicables. Si no estás de acuerdo con estos términos, no uses la aplicación.'
+        content: 'Al acceder y usar Snapfood, aceptas estar sujeto a estos Términos de Servicio y todas las leyes y regulaciones aplicables. Si no estás de acuerdo con estos términos, no uses la aplicación.'
       },
       {
         title: '2. Descripción del Servicio',
-        content: 'FoodSnap es una aplicación móvil que proporciona:\n\n• Análisis nutricional de fotos de comida usando inteligencia artificial\n• Seguimiento del historial de nutrición\n• Sugerencias de recetas basadas en ingredientes\n• Cálculo de necesidades calóricas y de proteínas\n• Notificaciones de progreso nutricional\n\nLa aplicación está disponible en versión gratuita (limitada) y versión Premium (sin restricciones).'
+        content: 'Snapfood es una aplicación móvil que proporciona:\n\n• Análisis nutricional de fotos de comida usando inteligencia artificial\n• Seguimiento del historial de nutrición\n• Sugerencias de recetas basadas en ingredientes\n• Cálculo de necesidades calóricas y de proteínas\n• Notificaciones de progreso nutricional\n\nLa aplicación está disponible en versión gratuita (limitada) y versión Premium (sin restricciones).'
       },
       {
         title: '3. Modelo Freemium',
@@ -37,19 +37,23 @@ export default function TermsScreen() {
       },
       {
         title: '5. Limitaciones de Responsabilidad',
-        content: 'IMPORTANTE: FoodSnap proporciona ESTIMACIONES de información nutricional generadas por IA. Esta información es sólo para propósitos informativos y NO debe considerarse como consejo médico o nutricional profesional.\n\nNO GARANTIZAMOS:\n• La precisión absoluta de las estimaciones calóricas\n• La precisión de los valores de macronutrientes\n• La idoneidad de las sugerencias de recetas para condiciones de salud específicas\n\nConsulta siempre a un profesional de la salud calificado antes de hacer cambios significativos en tu dieta o estilo de vida.'
+        content: 'IMPORTANTE: Snapfood proporciona ESTIMACIONES de información nutricional generadas por IA. Esta información es sólo para propósitos informativos y NO debe considerarse como consejo médico o nutricional profesional.\n\nNO GARANTIZAMOS:\n• La precisión absoluta de las estimaciones calóricas\n• La precisión de los valores de macronutrientes\n• La idoneidad de las sugerencias de recetas para condiciones de salud específicas\n\nConsulta siempre a un profesional de la salud calificado antes de hacer cambios significativos en tu dieta o estilo de vida.'
+      },
+      {
+        title: '5.1 Aviso Nutricional Importante',
+        content: 'ESTA APLICACIÓN NO REEMPLAZA A UN NUTRICIONISTA\n\nLos cálculos de calorías, proteínas, carbohidratos y grasas se basan en fórmulas científicas estándar (Mifflin-St Jeor) que son estimaciones generales.\n\nCADA PERSONA ES DIFERENTE:\n• Tu metabolismo es único\n• Tus condiciones de salud pueden requerir ajustes\n• Tus necesidades nutricionales varían según actividad, estrés, sueño, etc.\n\nLas sugerencias de recetas y notificaciones inteligentes son orientativas. Para un plan nutricional personalizado y seguro, consulta siempre con un nutricionista certificado o médico especialista.\n\nSnapfood es una herramienta de seguimiento, NO un sustituto del asesoramiento profesional.'
       },
       {
         title: '6. Uso Aceptable',
-        content: 'Al usar FoodSnap, aceptas NO:\n\n• Usar la aplicación para propósitos ilegales\n• Intentar hackear o comprometer la seguridad de la aplicación\n• Abusar del servicio al cliente o soporte\n• Compartir contenido inapropiado u ofensivo\n• Intentar eludir las limitaciones de la versión gratuita\n• Usar la aplicación de maneras que puedan dañar a otros usuarios'
+        content: 'Al usar Snapfood, aceptas NO:\n\n• Usar la aplicación para propósitos ilegales\n• Intentar hackear o comprometer la seguridad de la aplicación\n• Abusar del servicio al cliente o soporte\n• Compartir contenido inapropiado u ofensivo\n• Intentar eludir las limitaciones de la versión gratuita\n• Usar la aplicación de maneras que puedan dañar a otros usuarios'
       },
       {
         title: '7. Propiedad Intelectual',
-        content: 'Todo el contenido, diseño, código y marcas comerciales en FoodSnap son propiedad de FoodSnap Inc. o sus licenciantes.\n\nLas fotos que tomas permanecen siendo tuyas, pero nos otorgas una licencia para procesarlas y analizarlas para proporcionar el servicio.'
+        content: 'Todo el contenido, diseño, código y marcas comerciales en Snapfood son propiedad de Snapfood Inc. o sus licenciantes.\n\nLas fotos que tomas permanecen siendo tuyas, pero nos otorgas una licencia para procesarlas y analizarlas para proporcionar el servicio.'
       },
       {
         title: '8. Terminación',
-        content: 'Podemos suspender o terminar tu acceso a FoodSnap si:\n\n• Violas estos Términos de Servicio\n• Usas la aplicación de manera fraudulenta\n• No pagas las tarifas de suscripción (Premium)\n• Participas en actividades dañinas\n\nPuedes terminar tu cuenta en cualquier momento eliminando la aplicación y contactándonos para solicitar la eliminación de datos.'
+        content: 'Podemos suspender o terminar tu acceso a Snapfood si:\n\n• Violas estos Términos de Servicio\n• Usas la aplicación de manera fraudulenta\n• No pagas las tarifas de suscripción (Premium)\n• Participas en actividades dañinas\n\nPuedes terminar tu cuenta en cualquier momento eliminando la aplicación y contactándonos para solicitar la eliminación de datos.'
       },
       {
         title: '9. Cambios a los Términos',
@@ -67,15 +71,15 @@ export default function TermsScreen() {
   } : {
     title: 'Terms of Service',
     lastUpdated: 'Last Updated: January 2026',
-    intro: 'Welcome to FoodSnap. By using our application, you agree to the following Terms of Service. Please read them carefully.',
+    intro: 'Welcome to Snapfood. By using our application, you agree to the following Terms of Service. Please read them carefully.',
     sections: [
       {
         title: '1. Acceptance of Terms',
-        content: 'By accessing and using FoodSnap, you agree to be bound by these Terms of Service and all applicable laws and regulations. If you do not agree with these terms, do not use the application.'
+        content: 'By accessing and using Snapfood, you agree to be bound by these Terms of Service and all applicable laws and regulations. If you do not agree with these terms, do not use the application.'
       },
       {
         title: '2. Service Description',
-        content: 'FoodSnap is a mobile application that provides:\n\n• Nutritional analysis of food photos using artificial intelligence\n• Nutrition history tracking\n• Recipe suggestions based on ingredients\n• Calorie and protein needs calculation\n• Nutrition progress notifications\n\nThe app is available in Free version (limited) and Premium version (unrestricted).'
+        content: 'Snapfood is a mobile application that provides:\n\n• Nutritional analysis of food photos using artificial intelligence\n• Nutrition history tracking\n• Recipe suggestions based on ingredients\n• Calorie and protein needs calculation\n• Nutrition progress notifications\n\nThe app is available in Free version (limited) and Premium version (unrestricted).'
       },
       {
         title: '3. Freemium Model',
@@ -87,19 +91,23 @@ export default function TermsScreen() {
       },
       {
         title: '5. Limitation of Liability',
-        content: 'IMPORTANT: FoodSnap provides AI-generated ESTIMATES of nutritional information. This information is for informational purposes only and should NOT be considered as professional medical or nutritional advice.\n\nWE DO NOT GUARANTEE:\n• Absolute accuracy of calorie estimates\n• Accuracy of macronutrient values\n• Suitability of recipe suggestions for specific health conditions\n\nAlways consult a qualified healthcare professional before making significant changes to your diet or lifestyle.'
+        content: 'IMPORTANT: Snapfood provides AI-generated ESTIMATES of nutritional information. This information is for informational purposes only and should NOT be considered as professional medical or nutritional advice.\n\nWE DO NOT GUARANTEE:\n• Absolute accuracy of calorie estimates\n• Accuracy of macronutrient values\n• Suitability of recipe suggestions for specific health conditions\n\nAlways consult a qualified healthcare professional before making significant changes to your diet or lifestyle.'
+      },
+      {
+        title: '5.1 Important Nutritional Notice',
+        content: 'THIS APP DOES NOT REPLACE A NUTRITIONIST\n\nCalorie, protein, carbohydrate, and fat calculations are based on standard scientific formulas (Mifflin-St Jeor) which are general estimates.\n\nEVERY PERSON IS DIFFERENT:\n• Your metabolism is unique\n• Your health conditions may require adjustments\n• Your nutritional needs vary based on activity, stress, sleep, etc.\n\nRecipe suggestions and smart notifications are guidance only. For a personalized and safe nutrition plan, always consult with a certified nutritionist or medical specialist.\n\nSnapfood is a tracking tool, NOT a substitute for professional advice.'
       },
       {
         title: '6. Acceptable Use',
-        content: 'By using FoodSnap, you agree NOT to:\n\n• Use the app for illegal purposes\n• Attempt to hack or compromise app security\n• Abuse customer service or support\n• Share inappropriate or offensive content\n• Attempt to circumvent free version limitations\n• Use the app in ways that could harm other users'
+        content: 'By using Snapfood, you agree NOT to:\n\n• Use the app for illegal purposes\n• Attempt to hack or compromise app security\n• Abuse customer service or support\n• Share inappropriate or offensive content\n• Attempt to circumvent free version limitations\n• Use the app in ways that could harm other users'
       },
       {
         title: '7. Intellectual Property',
-        content: 'All content, design, code, and trademarks in FoodSnap are owned by FoodSnap Inc. or its licensors.\n\nPhotos you take remain yours, but you grant us a license to process and analyze them to provide the service.'
+        content: 'All content, design, code, and trademarks in Snapfood are owned by Snapfood Inc. or its licensors.\n\nPhotos you take remain yours, but you grant us a license to process and analyze them to provide the service.'
       },
       {
         title: '8. Termination',
-        content: 'We may suspend or terminate your access to FoodSnap if you:\n\n• Violate these Terms of Service\n• Use the app fraudulently\n• Fail to pay subscription fees (Premium)\n• Engage in harmful activities\n\nYou can terminate your account anytime by deleting the app and contacting us to request data deletion.'
+        content: 'We may suspend or terminate your access to Snapfood if you:\n\n• Violate these Terms of Service\n• Use the app fraudulently\n• Fail to pay subscription fees (Premium)\n• Engage in harmful activities\n\nYou can terminate your account anytime by deleting the app and contacting us to request data deletion.'
       },
       {
         title: '9. Changes to Terms',
