@@ -23,7 +23,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.masiru.snapfood",
-      "versionCode": 32,
+      "versionCode": 33,
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
